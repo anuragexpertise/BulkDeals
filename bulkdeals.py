@@ -29,6 +29,7 @@ class BulkDealsProcessor:
         if df.empty:
             logging.warning("No data to process")
             return df
+
         today_date = dt.date.today()
         if 'Quantity Traded' in df.columns and 'Trade Price / Wght. Avg. Price' in df.columns:
             df['Amt (Cr)'] = df['Quantity Traded'] * \
@@ -37,6 +38,8 @@ class BulkDealsProcessor:
             df = df.groupby(['Symbol', 'Client Name'])['Amt (Cr)'].apply(
                 lambda x: x[df['Buy/Sell'] == 'BUY'].sum() - x[df['Buy/Sell'] == 'SELL'].sum()).reset_index()
             df = df.rename(columns={'Amt (Cr)': 'Net Amt (Cr)'})
+            df['Net Amt (Cr)'] = pd.to_numeric(df['Net Amt (Cr)'])
+            df['Net Amt (Cr)'] = df['Net Amt (Cr)'].round(4)
             df.sort_values(by=['Symbol', 'Net Amt (Cr)'], inplace=True)
         return df
 
@@ -62,7 +65,15 @@ class BulkDealsModel(QAbstractTableModel):
     def data(self, index, role):
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             value = self.df.iloc[index.row(), index.column()]
-            return str(value)
+            if self.df.columns[index.column()] == 'Net Amt (Cr)':
+                return round(float(value),4)  # format as a float with 4 decimal places
+            else:
+                return str(value)
+        elif role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
+            if self.df.columns[index.column()] == 'Net Amt (Cr)':
+                return QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter
+            else:
+                return QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter
         return None
 
 
@@ -111,7 +122,11 @@ class BulkDealsController:
             self.on_selection_changed)
 
     def on_section_clicked(self, index):
-        self.proxy_model.sort(index, Qt.SortOrder.AscendingOrder)
+        if self.proxy_model.sortRole() == Qt.ItemDataRole.DisplayRole:
+            if self.proxy_model.sortOrder() == Qt.SortOrder.AscendingOrder:
+                self.proxy_model.sort(index, Qt.SortOrder.DescendingOrder)
+            else:
+                self.proxy_model.sort(index, Qt.SortOrder.AscendingOrder)
 
     def on_selection_changed(self):
         selection = self.ui.tableView.selectionModel().selectedIndexes()
@@ -157,7 +172,7 @@ class BulkDealsController:
         self.ui.widget_layout.addWidget(self.toolbar)
 
         self.display_message("Total Net Amount : {0}".format(
-            self.selected_df['Net Amt (Cr)'].sum()))
+            round(self.selected_df['Net Amt (Cr)'].sum(), 4)))
 
     def display_client_figure(self, client_name):
         self.clear_layout()
