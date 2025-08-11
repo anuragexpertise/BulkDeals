@@ -6,13 +6,13 @@ from PyQt6.QtCore import QAbstractTableModel, Qt, QItemSelectionModel, QSortFilt
 from PyQt6 import uic, QtCore
 import pandas as pd
 import logging
-import numpy as np
+# import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.figure as Figure
+# import matplotlib.figure as Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
-
+sys
 class BulkDealsFetcher:
     def fetch(self) -> pd.DataFrame:
         try:
